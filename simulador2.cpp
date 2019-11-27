@@ -7,23 +7,18 @@
  
 unsigned int a = 1103515245;
 unsigned int c = 12345;
-unsigned int m =2147483648;
+unsigned int m = 2147483648;
 unsigned int seed = 5560;
 
 //==================================================================
 // classes evento e simulação - base para o desenvolvimento da simulação
 //==================================================================
-
 class event {
 public:
-  // Construct sets time of event.
   event (double t) : time (t)  { }
-  
-  // Execute event by invoking this method.
   virtual void processEvent () = 0; 
   const double time;
-};
- 
+}; 
  
 class simulation {
 public:
@@ -51,24 +46,21 @@ public:
 		lambc0 = 0.1;
 		lambc1 = 0.2;
 		lambc2 = 0.3;
-		lambs0 = 0.7;
-		lambs1 = 0.8;
-		lambs2 = 0.9;
+		lambs0 = 1.7;
+		lambs1 = 1.8;
+		lambs2 = 1.9;
 	} //aqui vai criar os estados de cada fila: ocupado, livre, etc
 	std::queue<event *> aux0,aux1,aux2; //filas auxiliares
 	bool s0,s1,s2;
-	int counter0,counter1,counter2,descartado;
-	double lambc0,lambc1,lambc2,lambs0, lambs1, lambs2;
-
+	int counter0, counter1, counter2, descartado;
+	double lambc0, lambc1, lambc2, lambs0, lambs1, lambs2;
 } oSimulador;
 
-void simulation::run () {
- 
-  while (oSimulador.counter0 <= 1000) { //enquanto exisitr eventos na fila de eventos
+void simulation::run () { 
+  while (oSimulador.counter0 <= 10000) { //enquanto exisitr eventos na fila de eventos
     event * nextEvent = eventQueue.top(); //captura evento no topo da fila
     eventQueue.pop ();  //retira evento da fila
     simtime = nextEvent->time;  //ajusta tempo de simulação
-	//std::cout << simtime<<'\n';
     nextEvent->processEvent();  //processa evento
     delete nextEvent;  //remove evento
   }
@@ -76,9 +68,8 @@ void simulation::run () {
  
 //===================================================================
 //Customização dos eventos e do simulador
-//===================================================================
+//===================================================================	
 
-	
 double fRand() {
 	//trocar pelo nosso gerador de numeros uniformes
     seed = (a*seed+c)% m;
@@ -134,13 +125,13 @@ void saida2::processEvent() {
 void chegada2::processEvent() {
 	std::cout << "ec2: " << oSimulador.simtime  << '\n';
 	saida2 *evs2 = new saida2(oSimulador.simtime+exp(oSimulador.lambs2));
-	oSimulador.scheduleEvent(evs2);	
+	oSimulador.scheduleEvent(evs2);
 	if(oSimulador.s2 == false) oSimulador.s2 = true;
-	else oSimulador.aux2.push(evs2);		
+	else oSimulador.aux2.push(evs2);
 	oSimulador.counter2++;
 }
  
-void saida1::processEvent() { 
+void saida1::processEvent() {
 	std::cout << "es1: " << oSimulador.simtime  << '\n';
 	if(oSimulador.aux1.empty()) oSimulador.s1 = false;
 	else oSimulador.aux1.pop();
@@ -150,7 +141,7 @@ void chegada1::processEvent() {
 	std::cout << "ec1: " << oSimulador.simtime  << '\n';
 	saida1 *evs1 = new saida1(oSimulador.simtime+exp(oSimulador.lambs1));
 	oSimulador.scheduleEvent(evs1);
-	if(oSimulador.s1 == false) oSimulador.s1 = true;	
+	if(oSimulador.s1 == false) oSimulador.s1 = true;
 	else oSimulador.aux1.push(evs1);
 	oSimulador.counter1++;
 }
@@ -167,25 +158,25 @@ void saida0::processEvent() {
 		oSimulador.scheduleEvent(evc2);
 	}else oSimulador.descartado++;
 	chegada0 *evc0 = new chegada0(oSimulador.simtime+exp(oSimulador.lambc0));
-	oSimulador.scheduleEvent(evc0);	
+	oSimulador.scheduleEvent(evc0);
 	if(oSimulador.aux0.empty()) oSimulador.s0 = false;
 	else oSimulador.aux0.pop();
 }
- 
+
 void chegada0::processEvent() {
 	    std::cout << "ec0: " << oSimulador.simtime  << '\n';
 		saida0 *evs0 = new saida0(oSimulador.simtime+exp(oSimulador.lambs0));
-		oSimulador.scheduleEvent(evs0);	
+		oSimulador.scheduleEvent(evs0);
 		if(oSimulador.s0 == false) oSimulador.s0 = true;
-		else oSimulador.aux0.push(evs0);		
+		else oSimulador.aux0.push(evs0);
 		oSimulador.counter0++;
 }
 
-//////////////////////// main ////////////////////////////////////////
-int main() { 
+////////////////////////////// main ////////////////////////////////////////
+int main() {
 	oSimulador.simtime = oSimulador.simtime+exp(oSimulador.lambc0);
-	oSimulador.scheduleEvent(new chegada0 (oSimulador.simtime));//mudar o tempo para ser exponencial
-	oSimulador.run (); // inicia simulador	
+	oSimulador.scheduleEvent(new chegada0 (oSimulador.simtime));
+	oSimulador.run (); //inicia simulador
 	std::cout << "eventos0 " << oSimulador.counter0  << '\n';
 	std::cout << "eventos1 " << oSimulador.counter1  << '\n';
 	std::cout << "eventos2 " << oSimulador.counter2  << '\n';
