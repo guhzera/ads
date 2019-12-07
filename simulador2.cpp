@@ -46,22 +46,23 @@ public:
 		lambc0 = 0.1;
 		lambc1 = 0.2;
 		lambc2 = 0.3;
-		lambs0 = 1.7;
-		lambs1 = 1.8;
-		lambs2 = 1.9;
-	} //aqui vai criar os estados de cada fila: ocupado, livre, etc
+		lambs0 = 0.4;
+		lambs1 = 0.5;
+		lambs2 = 0.6;
+		m_f0=m_f1=m_f2=0;
+	}
 	std::queue<event *> aux0,aux1,aux2; //filas auxiliares
-	bool s0,s1,s2;
-	int counter0, counter1, counter2, descartado;
-	double lambc0, lambc1, lambc2, lambs0, lambs1, lambs2;
+	bool s0,s1,s2; //estado dos servidores de cada fila
+	int counter0, counter1, counter2, descartado; //contador de eventos em cada fila
+	double lambc0, lambc1, lambc2, lambs0, lambs1, lambs2, m_f0, m_f1, m_f2;
 } oSimulador;
 
 void simulation::run () { 
-  while (oSimulador.counter0 <= 10000) { //enquanto exisitr eventos na fila de eventos
+  while (oSimulador.counter0 <= 10001) { //enquanto exisitr eventos na fila de eventos
     event * nextEvent = eventQueue.top(); //captura evento no topo da fila
     eventQueue.pop ();  //retira evento da fila
-    simtime = nextEvent->time;  //ajusta tempo de simulação
-    nextEvent->processEvent();  //processa evento
+	simtime = nextEvent->time;  //ajusta tempo de simulação
+    nextEvent->processEvent();  //processa evento	
     delete nextEvent;  //remove evento
   }
 }
@@ -116,70 +117,79 @@ public:
 	virtual void processEvent ();
 };
  
-void saida2::processEvent() { 
+void saida2::processEvent() {
 	std::cout << "es2: " << oSimulador.simtime  << '\n';
 	if(oSimulador.aux2.empty()) oSimulador.s2 = false;
-	else oSimulador.aux2.pop();
+	else{
+		oSimulador.scheduleEvent(new saida2(oSimulador.simtime+exp(oSimulador.lambs2)));
+		oSimulador.aux2.pop();
+	} 
 }
 
 void chegada2::processEvent() {
 	std::cout << "ec2: " << oSimulador.simtime  << '\n';
-	saida2 *evs2 = new saida2(oSimulador.simtime+exp(oSimulador.lambs2));
-	oSimulador.scheduleEvent(evs2);
-	if(oSimulador.s2 == false) oSimulador.s2 = true;
-	else oSimulador.aux2.push(evs2);
 	oSimulador.counter2++;
+	if(oSimulador.s2 == false){
+		oSimulador.scheduleEvent(new saida2(oSimulador.simtime+exp(oSimulador.lambs2)));
+		oSimulador.s2 = true;
+	}else oSimulador.aux2.push(new chegada2(this->time));
+	std::cout << "q2: " << oSimulador.aux2.size()  << '\n';	
 }
  
 void saida1::processEvent() {
 	std::cout << "es1: " << oSimulador.simtime  << '\n';
 	if(oSimulador.aux1.empty()) oSimulador.s1 = false;
-	else oSimulador.aux1.pop();
+	else{
+		oSimulador.scheduleEvent(new saida1(oSimulador.simtime+exp(oSimulador.lambs1)));
+		oSimulador.aux1.pop();
+	} 
 }
 
 void chegada1::processEvent() {
 	std::cout << "ec1: " << oSimulador.simtime  << '\n';
-	saida1 *evs1 = new saida1(oSimulador.simtime+exp(oSimulador.lambs1));
-	oSimulador.scheduleEvent(evs1);
-	if(oSimulador.s1 == false) oSimulador.s1 = true;
-	else oSimulador.aux1.push(evs1);
-	oSimulador.counter1++;
+	oSimulador.counter1++;	
+	if(oSimulador.s1 == false){
+		oSimulador.scheduleEvent(new saida1(oSimulador.simtime+exp(oSimulador.lambs1)));
+		oSimulador.s1 = true;
+	}else oSimulador.aux1.push(new chegada1(this->time));
+	std::cout << "q1: " << oSimulador.aux1.size()  << '\n';
 }
  
 void saida0::processEvent() {
 	std::cout << "es0: " << oSimulador.simtime  << '\n';
-	double ii;
-	ii = fRand();
-	if(ii > 0.5){
-		chegada1 *evc1 = new chegada1(oSimulador.simtime+exp(oSimulador.lambc1));
-		oSimulador.scheduleEvent(evc1);
-	}else if(ii < 0.3){
-		chegada2 *evc2 = new chegada2(oSimulador.simtime+exp(oSimulador.lambc2));
-		oSimulador.scheduleEvent(evc2);
-	}else oSimulador.descartado++;
-	chegada0 *evc0 = new chegada0(oSimulador.simtime+exp(oSimulador.lambc0));
-	oSimulador.scheduleEvent(evc0);
+	double ii = fRand();
+	if(ii > 0.5) 		oSimulador.scheduleEvent(new chegada1(oSimulador.simtime+exp(oSimulador.lambc1)));	
+	else if(ii < 0.3)	oSimulador.scheduleEvent(new chegada2(oSimulador.simtime+exp(oSimulador.lambc2)));
+	else 				oSimulador.descartado++;
+	
 	if(oSimulador.aux0.empty()) oSimulador.s0 = false;
-	else oSimulador.aux0.pop();
+	else{		
+		oSimulador.scheduleEvent(new saida0(oSimulador.simtime+exp(oSimulador.lambs0)));
+		oSimulador.aux0.pop();
+	}
+	oSimulador.scheduleEvent(new chegada0 (oSimulador.simtime+exp(oSimulador.lambc0)));
 }
 
-void chegada0::processEvent() {
-	    std::cout << "ec0: " << oSimulador.simtime  << '\n';
-		saida0 *evs0 = new saida0(oSimulador.simtime+exp(oSimulador.lambs0));
-		oSimulador.scheduleEvent(evs0);
-		if(oSimulador.s0 == false) oSimulador.s0 = true;
-		else oSimulador.aux0.push(evs0);
-		oSimulador.counter0++;
+void chegada0::processEvent() {	
+	std::cout << "ec0: " << oSimulador.simtime  << '\n';	
+	oSimulador.counter0++;				
+	if(oSimulador.s0 == false){
+		oSimulador.scheduleEvent(new saida0(oSimulador.simtime+exp(oSimulador.lambs0)));
+		oSimulador.s0 = true;
+	}else oSimulador.aux0.push(new chegada0(this->time));
+	std::cout << "q0: " << oSimulador.aux0.size()  << '\n';
 }
-
+ 
 ////////////////////////////// main ////////////////////////////////////////
 int main() {
-	oSimulador.simtime = oSimulador.simtime+exp(oSimulador.lambc0);
-	oSimulador.scheduleEvent(new chegada0 (oSimulador.simtime));
+	oSimulador.scheduleEvent(new chegada0 (oSimulador.simtime+exp(oSimulador.lambc0)));
 	oSimulador.run (); //inicia simulador
-	std::cout << "eventos0 " << oSimulador.counter0  << '\n';
-	std::cout << "eventos1 " << oSimulador.counter1  << '\n';
-	std::cout << "eventos2 " << oSimulador.counter2  << '\n';
-	std::cout << "eventos descartados " << oSimulador.descartado  << '\n';
+	std::cout << "eventos0: " << oSimulador.counter0  << '\n';
+	std::cout << "q0: " << oSimulador.aux0.size()  << '\n';
+	std::cout << "eventos1: " << oSimulador.counter1  << '\n';
+	std::cout << "q1: " << oSimulador.aux1.size()  << '\n';
+	std::cout << "eventos2: " << oSimulador.counter2  << '\n';
+	std::cout << "q2: " << oSimulador.aux2.size()  << '\n';
+	std::cout << "eventos descartados: " << oSimulador.descartado  << '\n';
 	return 0;
 }
